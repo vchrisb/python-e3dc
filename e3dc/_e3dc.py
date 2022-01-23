@@ -836,11 +836,13 @@ class E3DC:
         ):  # do not send this for a web connection because it screws up the handshake!
             self._set_serial(
                 self.sendRequest(
-                    ("INFO_REQ_SERIAL_NUMBER", "None", None), keepAlive=keepAlive
+                    ("INFO_REQ_SERIAL_NUMBER", "None", None), keepAlive=True
                 )[2]
             )
 
-        sys_specs = self.sendRequest(("EMS_REQ_GET_SYS_SPECS", "None", None))[2]
+        sys_specs = self.sendRequest(
+            ("EMS_REQ_GET_SYS_SPECS", "None", None), keepAlive=keepAlive
+        )[2]
         for item in sys_specs:
             if rscpFindTag(item, "EMS_SYS_SPEC_NAME")[2] == "installedBatteryCapacity":
                 self.installedBatteryCapacity = rscpFindTag(
@@ -964,7 +966,7 @@ class E3DC:
         outObj = {k: SystemStatusBools[v] for k, v in outObj.items()}
         return outObj
 
-    def get_battery_data(self, batIndex=0, keepAlive=False):
+    def get_battery_data(self, batIndex=0, dcb=None, keepAlive=False):
         """Polls the baterry data via rscp protocol locally
 
         Returns:
@@ -999,77 +1001,183 @@ class E3DC:
                 "Container",
                 [
                     ("BAT_INDEX", "Uint16", batIndex),
-                    ("BAT_REQ_DEVICE_STATE", "None", None),
-                    ("BAT_REQ_MAX_DCB_CELL_TEMPERATURE", "None", None),
-                    ("BAT_REQ_MODULE_VOLTAGE", "None", None),
+                    ("BAT_REQ_ASOC", "None", None),
+                    ("BAT_REQ_CHARGE_CYCLES", "None", None),
                     ("BAT_REQ_CURRENT", "None", None),
+                    ("BAT_REQ_DCB_COUNT", "None", None),
+                    ("BAT_REQ_DESIGN_CAPACITY", "None", None),
+                    ("BAT_REQ_DEVICE_NAME", "None", None),
+                    ("BAT_REQ_DEVICE_STATE", "None", None),
+                    ("BAT_REQ_EOD_VOLTAGE", "None", None),
+                    ("BAT_REQ_ERROR_CODE", "None", None),
+                    ("BAT_REQ_FCC", "None", None),
                     ("BAT_REQ_MAX_BAT_VOLTAGE", "None", None),
                     ("BAT_REQ_MAX_CHARGE_CURRENT", "None", None),
-                    ("BAT_REQ_EOD_VOLTAGE", "None", None),
                     ("BAT_REQ_MAX_DISCHARGE_CURRENT", "None", None),
+                    ("BAT_REQ_MAX_DCB_CELL_TEMPERATURE", "None", None),
+                    ("BAT_REQ_MIN_DCB_CELL_TEMPERATURE", "None", None),
+                    ("BAT_REQ_INTERNALS", "None", None),
+                    ("BAT_REQ_MODULE_VOLTAGE", "None", None),
+                    ("BAT_REQ_RC", "None", None),
+                    ("BAT_REQ_READY_FOR_SHUTDOWN", "None", None),
                     ("BAT_REQ_RSOC", "None", None),
-                    ("BAT_REQ_CHARGE_CYCLES", "None", None),
-                    ("BAT_REQ_TERMINAL_VOLTAGE", "None", None),
+                    ("BAT_REQ_RSOC_REAL", "None", None),
                     ("BAT_REQ_STATUS_CODE", "None", None),
-                    ("BAT_REQ_ERROR_CODE", "None", None),
-                    ("BAT_REQ_DEVICE_NAME", "None", None),
+                    ("BAT_REQ_TERMINAL_VOLTAGE", "None", None),
+                    ("BAT_REQ_TOTAL_USE_TIME", "None", None),
+                    ("BAT_REQ_TOTAL_DISCHARGE_TIME", "None", None),
+                    ("BAT_REQ_TRAINING_MODE", "None", None),
                     ("BAT_REQ_USABLE_CAPACITY", "None", None),
                     ("BAT_REQ_USABLE_REMAINING_CAPACITY", "None", None),
-                    ("BAT_REQ_DESIGN_CAPACITY", "None", None),
                 ],
             ),
-            keepAlive=keepAlive,
+            keepAlive=True,
         )
 
+        print(req)
+
+        dcbCount = rscpFindTag(req, "BAT_DCB_COUNT")[2]
         deviceStateContainer = rscpFindTag(req, "BAT_DEVICE_STATE")
 
-        chargeCycles = rscpFindTag(req, "BAT_CHARGE_CYCLES")[2]
-        current = round(rscpFindTag(req, "BAT_CURRENT")[2], 2)
-        designCapacity = round(rscpFindTag(req, "BAT_DESIGN_CAPACITY")[2], 2)
-        deviceConnected = rscpFindTag(deviceStateContainer, "BAT_DEVICE_CONNECTED")[2]
-        deviceInService = rscpFindTag(deviceStateContainer, "BAT_DEVICE_IN_SERVICE")[2]
-        deviceName = rscpFindTag(req, "BAT_DEVICE_NAME")[2]
-        deviceWorking = rscpFindTag(deviceStateContainer, "BAT_DEVICE_WORKING")[2]
-        eodVoltage = round(rscpFindTag(req, "BAT_EOD_VOLTAGE")[2], 2)
-        errorCode = rscpFindTag(req, "BAT_ERROR_CODE")[2]
-        maxBatVoltage = round(rscpFindTag(req, "BAT_MAX_BAT_VOLTAGE")[2], 2)
-        maxChargeCurrent = round(rscpFindTag(req, "BAT_MAX_CHARGE_CURRENT")[2], 2)
-        maxDcbCellTemp = round(rscpFindTag(req, "BAT_MAX_DCB_CELL_TEMPERATURE")[2], 2)
-        maxDischargeCurrent = round(rscpFindTag(req, "BAT_MAX_DISCHARGE_CURRENT")[2], 2)
-        moduleVoltage = round(rscpFindTag(req, "BAT_MODULE_VOLTAGE")[2], 2)
-        rsoc = round(rscpFindTag(req, "BAT_RSOC")[2], 2)
-        statusCode = rscpFindTag(req, "BAT_STATUS_CODE")[2]
-        terminalVoltage = round(rscpFindTag(req, "BAT_TERMINAL_VOLTAGE")[2], 2)
-        usuableCapacity = round(rscpFindTag(req, "BAT_USABLE_CAPACITY")[2], 2)
-        usuableRemainingCapacity = round(
-            rscpFindTag(req, "BAT_USABLE_REMAINING_CAPACITY")[2], 2
-        )
-
         outObj = {
+            "asoc": rscpFindTag(req, "BAT_ASOC")[2],
             "batIndex": batIndex,
-            "chargeCycles": chargeCycles,
-            "current": current,
-            "designCapacity": designCapacity,
-            "deviceConnected": deviceConnected,
-            "deviceInService": deviceInService,
-            "deviceName": deviceName,
-            "deviceWorking": deviceWorking,
-            "eodVoltage": eodVoltage,
-            "errorCode": errorCode,
-            "maxBatVoltage": maxBatVoltage,
-            "maxChargeCurrent": maxChargeCurrent,
-            "maxDcbCellTemp": maxDcbCellTemp,
-            "maxDischargeCurrent": maxDischargeCurrent,
-            "moduleVoltage": moduleVoltage,
-            "rsoc": rsoc,
-            "statusCode": statusCode,
-            "terminalVoltage": terminalVoltage,
-            "usuableCapacity": usuableCapacity,
-            "usuableRemainingCapacity": usuableRemainingCapacity,
+            "chargeCycles": rscpFindTag(req, "BAT_CHARGE_CYCLES")[2],
+            "current": round(rscpFindTag(req, "BAT_CURRENT")[2], 2),
+            "dcbCount": dcbCount,
+            "dcbs": {},
+            "designCapacity": round(rscpFindTag(req, "BAT_DESIGN_CAPACITY")[2], 2),
+            "deviceConnected": rscpFindTag(
+                deviceStateContainer, "BAT_DEVICE_CONNECTED"
+            )[2],
+            "deviceInService": rscpFindTag(
+                deviceStateContainer, "BAT_DEVICE_IN_SERVICE"
+            )[2],
+            "deviceName": rscpFindTag(req, "BAT_DEVICE_NAME")[2],
+            "deviceWorking": rscpFindTag(deviceStateContainer, "BAT_DEVICE_WORKING")[2],
+            "eodVoltage": round(rscpFindTag(req, "BAT_EOD_VOLTAGE")[2], 2),
+            "errorCode": rscpFindTag(req, "BAT_ERROR_CODE")[2],
+            "fcc": rscpFindTag(req, "BAT_FCC")[2],
+            "maxBatVoltage": round(rscpFindTag(req, "BAT_MAX_BAT_VOLTAGE")[2], 2),
+            "maxChargeCurrent": round(rscpFindTag(req, "BAT_MAX_CHARGE_CURRENT")[2], 2),
+            "maxDischargeCurrent": round(
+                rscpFindTag(req, "BAT_MAX_DISCHARGE_CURRENT")[2], 2
+            ),
+            "maxDcbCellTemp": round(
+                rscpFindTag(req, "BAT_MAX_DCB_CELL_TEMPERATURE")[2], 2
+            ),
+            "measuredResistance": round(
+                rscpFindTag(req, "BAT_MEASURED_RESISTANCE")[2], 4
+            ),
+            "measuredResistanceRun": round(
+                rscpFindTag(req, "BAT_RUN_MEASURED_RESISTANCE")[2], 4
+            ),
+            "minDcbCellTemp": round(
+                rscpFindTag(req, "BAT_MIN_DCB_CELL_TEMPERATURE")[2], 2
+            ),
+            "moduleVoltage": round(rscpFindTag(req, "BAT_MODULE_VOLTAGE")[2], 2),
+            "rc": round(rscpFindTag(req, "BAT_RC")[2], 2),
+            "readyForShutdown": round(rscpFindTag(req, "BAT_READY_FOR_SHUTDOWN")[2], 2),
+            "rsoc": round(rscpFindTag(req, "BAT_RSOC")[2], 2),
+            "rsocReal": round(rscpFindTag(req, "BAT_RSOC_REAL")[2], 2),
+            "statusCode": rscpFindTag(req, "BAT_STATUS_CODE")[2],
+            "terminalVoltage": round(rscpFindTag(req, "BAT_TERMINAL_VOLTAGE")[2], 2),
+            "totalUseTime": rscpFindTag(req, "BAT_TOTAL_USE_TIME")[2],
+            "totalDischargeTime": rscpFindTag(req, "BAT_TOTAL_DISCHARGE_TIME")[2],
+            "trainingMode": rscpFindTag(req, "BAT_TRAINING_MODE")[2],
+            "usuableCapacity": round(rscpFindTag(req, "BAT_USABLE_CAPACITY")[2], 2),
+            "usuableRemainingCapacity": round(
+                rscpFindTag(req, "BAT_USABLE_REMAINING_CAPACITY")[2], 2
+            ),
         }
+
+        if dcb is None:
+            dcbs = range(0, dcbCount)
+        elif isinstance(dcbIndex, list):
+            dcbs = dcb
+        else:
+            dcbs = [dcb]
+
+        for dcb in dcbs:
+            req = self.sendRequest(
+                (
+                    "BAT_REQ_DATA",
+                    "Container",
+                    [
+                        ("BAT_INDEX", "Uint16", batIndex),
+                        ("BAT_REQ_DCB_ALL_CELL_TEMPERATURES", "Uint16", dcb),
+                        ("BAT_REQ_DCB_ALL_CELL_VOLTAGES", "Uint16", dcb),
+                        ("BAT_REQ_DCB_INFO", "Uint16", dcb),
+                    ],
+                ),
+                keepAlive=keepAlive if dcb == dcbs else True,
+            )
+
+            info = rscpFindTag(req, "BAT_DCB_INFO")
+
+            temperatures_raw = rscpFindTag(
+                rscpFindTag(req, "BAT_DCB_ALL_CELL_TEMPERATURES"), "BAT_DATA"
+            )[2]
+            temperatures = []
+            sensorCount = rscpFindTag(info, "BAT_DCB_NR_SENSOR")[2]
+            for sensor in range(0, sensorCount):
+                temperatures.append(round(temperatures_raw[sensor][2], 2))
+
+            voltages_raw = rscpFindTag(
+                rscpFindTag(req, "BAT_DCB_ALL_CELL_VOLTAGES"), "BAT_DATA"
+            )[2]
+            voltages = []
+            seriesCellCount = rscpFindTag(info, "BAT_DCB_NR_SERIES_CELL")[2]
+            for cell in range(0, seriesCellCount):
+                voltages.append(round(voltages_raw[cell][2], 2))
+
+            dcbobj = {
+                "current": rscpFindTag(info, "BAT_DCB_CURRENT")[2],
+                "currentAvg30s": rscpFindTag(info, "BAT_DCB_CURRENT_AVG_30S")[2],
+                "cycleCount": rscpFindTag(info, "BAT_DCB_CYCLE_COUNT")[2],
+                "designCapacity": rscpFindTag(info, "BAT_DCB_DESIGN_CAPACITY")[2],
+                "designVoltage": rscpFindTag(info, "BAT_DCB_DESIGN_VOLTAGE")[2],
+                "deviceName": rscpFindTag(info, "BAT_DCB_DEVICE_NAME")[2],
+                "endOfDischarge": rscpFindTag(info, "BAT_DCB_END_OF_DISCHARGE")[2],
+                "error": rscpFindTag(info, "BAT_DCB_ERROR")[2],
+                "fullChargeCapacity": rscpFindTag(info, "BAT_DCB_FULL_CHARGE_CAPACITY")[
+                    2
+                ],
+                "fwVersion": rscpFindTag(info, "BAT_DCB_FW_VERSION")[2],
+                "manufactureDate": rscpFindTag(info, "BAT_DCB_MANUFACTURE_DATE")[2],
+                "manufactureName": rscpFindTag(info, "BAT_DCB_MANUFACTURE_NAME")[2],
+                "maxChargeCurrent": rscpFindTag(info, "BAT_DCB_MAX_CHARGE_CURRENT")[2],
+                "maxChargeTemperature": rscpFindTag(
+                    info, "BAT_DCB_CHARGE_HIGH_TEMPERATURE"
+                )[2],
+                "maxChargeVoltage": rscpFindTag(info, "BAT_DCB_MAX_CHARGE_VOLTAGE")[2],
+                "maxDischargeCurrent": rscpFindTag(
+                    info, "BAT_DCB_MAX_DISCHARGE_CURRENT"
+                )[2],
+                "minChargeTemperature": rscpFindTag(
+                    info, "BAT_DCB_CHARGE_LOW_TEMPERATURE"
+                )[2],
+                "parallelCellCount": rscpFindTag(info, "BAT_DCB_NR_PARALLEL_CELL")[2],
+                "sensorCount": sensorCount,
+                "seriesCellCount": seriesCellCount,
+                "pcbVersion": rscpFindTag(info, "BAT_DCB_PCB_VERSION")[2],
+                "protocolVersion": rscpFindTag(info, "BAT_DCB_PROTOCOL_VERSION")[2],
+                "remainingCapacity": rscpFindTag(info, "BAT_DCB_REMAINING_CAPACITY")[2],
+                "serialCode": rscpFindTag(info, "BAT_DCB_SERIALCODE")[2],
+                "serialNo": rscpFindTag(info, "BAT_DCB_SERIALNO")[2],
+                "soc": rscpFindTag(info, "BAT_DCB_SOC")[2],
+                "soh": rscpFindTag(info, "BAT_DCB_SOH")[2],
+                "status": rscpFindTag(info, "BAT_DCB_STATUS")[2],
+                "temperatures": temperatures,
+                "voltage": rscpFindTag(info, "BAT_DCB_VOLTAGE")[2],
+                "voltageAvg30s": rscpFindTag(info, "BAT_DCB_VOLTAGE_AVG_30S")[2],
+                "voltages": voltages,
+                "warning": rscpFindTag(info, "BAT_DCB_WARNING")[2],
+            }
+            outObj["dcbs"][str(dcb)] = dcbobj
         return outObj
 
-    def get_pvi_data(self, stringIndex=0, pviTracker=0, keepAlive=False):
+    def get_pvi_data(self, pviIndex=0, string=None, phase=None, keepAlive=False):
         """Polls the inverter data via rscp protocol locally
 
         Returns:
@@ -1093,161 +1201,301 @@ class E3DC:
                     'temperature': temperature
                 }
         """
+
         req = self.sendRequest(
             (
                 "PVI_REQ_DATA",
                 "Container",
                 [
-                    ("PVI_INDEX", "Uint16", stringIndex),
-                    ("PVI_REQ_TEMPERATURE", "Uint16", pviTracker),
-                    ("PVI_REQ_AC_VOLTAGE", "Uint16", pviTracker),
-                    ("PVI_REQ_AC_CURRENT", "Uint16", pviTracker),
-                    ("PVI_REQ_AC_POWER", "Uint16", pviTracker),
-                    ("PVI_REQ_AC_APPARENTPOWER", "Uint16", pviTracker),
-                    ("PVI_REQ_AC_REACTIVEPOWER", "Uint16", pviTracker),
-                    ("PVI_REQ_DC_VOLTAGE", "Uint16", pviTracker),
-                    ("PVI_REQ_DC_CURRENT", "Uint16", pviTracker),
-                    ("PVI_REQ_DC_POWER", "Uint16", pviTracker),
-                    ("PVI_REQ_DEVICE_STATE", "Uint16", pviTracker),
-                    ("PVI_REQ_LAST_ERROR", "Uint16", pviTracker),
-                    ("PVI_REQ_AC_ENERGY_ALL", "Uint16", pviTracker),
+                    ("PVI_INDEX", "Uint16", pviIndex),
+                    ("PVI_REQ_AC_MAX_PHASE_COUNT", "None", None),
+                    ("PVI_REQ_TEMPERATURE_COUNT", "None", None),
+                    ("PVI_REQ_DC_MAX_STRING_COUNT", "None", None),
+                    ("PVI_REQ_USED_STRING_COUNT", "None", None),
+                    ("PVI_REQ_TYPE", "None", None),
+                    ("PVI_REQ_SERIAL_NUMBER", "None", None),
+                    ("PVI_REQ_VERSION", "None", None),
+                    ("PVI_REQ_ON_GRID", "None", None),
+                    ("PVI_REQ_STATE", "None", None),
+                    ("PVI_REQ_LAST_ERROR", "None", None),
+                    ("PVI_REQ_COS_PHI", "None", None),
+                    ("PVI_REQ_VOLTAGE_MONITORING", "None", None),
+                    ("PVI_REQ_POWER_MODE", "None", None),
+                    ("PVI_REQ_SYSTEM_MODE", "None", None),
+                    ("PVI_REQ_FREQUENCY_UNDER_OVER", "None", None),
+                    ("PVI_REQ_MAX_TEMPERATURE", "None", None),
+                    ("PVI_REQ_MIN_TEMPERATURE", "None", None),
+                    ("PVI_REQ_AC_MAX_APPARENTPOWER", "None", None),
+                    ("PVI_REQ_DEVICE_STATE", "None", None),
+                ],
+            ),
+            keepAlive=True,
+        )
+
+        maxPhaseCount = int(rscpFindTag(req, "PVI_AC_MAX_PHASE_COUNT")[2])
+        maxStringCount = int(rscpFindTag(req, "PVI_DC_MAX_STRING_COUNT")[2])
+        usedStringCount = int(rscpFindTag(req, "PVI_USED_STRING_COUNT")[2])
+
+        voltageMonitoring = rscpFindTag(req, "PVI_VOLTAGE_MONITORING")
+        cosPhi = rscpFindTag(req, "PVI_COS_PHI")
+        frequency = rscpFindTag(req, "PVI_FREQUENCY_UNDER_OVER")
+        deviceState = rscpFindTag(req, "PVI_DEVICE_STATE")
+
+        outObj = {
+            "index": pviIndex,
+            "type": rscpFindTag(req, "PVI_TYPE")[2],
+            "serialNumber": rscpFindTag(req, "PVI_SERIAL_NUMBER")[2],
+            "version": rscpFindTag(rscpFindTag(req, "PVI_VERSION"), "PVI_VERSION_MAIN")[
+                2
+            ],
+            "onGrid": rscpFindTag(req, "PVI_ON_GRID")[2],
+            "state": rscpFindTag(req, "PVI_STATE")[2],
+            "lastError": rscpFindTag(req, "PVI_LAST_ERROR")[2],
+            "cosPhi": {
+                "active": rscpFindTag(cosPhi, "PVI_COS_PHI_IS_AKTIV")[2],
+                "value": rscpFindTag(cosPhi, "PVI_COS_PHI_VALUE")[2],
+                "excited": rscpFindTag(cosPhi, "PVI_COS_PHI_EXCITED")[2],
+            },
+            "voltageMonitoring": {
+                "thresholdTop": rscpFindTag(
+                    voltageMonitoring, "PVI_VOLTAGE_MONITORING_THRESHOLD_TOP"
+                )[2],
+                "thresholdBottom": rscpFindTag(
+                    voltageMonitoring, "PVI_VOLTAGE_MONITORING_THRESHOLD_BOTTOM"
+                )[2],
+                "slopeUp": rscpFindTag(
+                    voltageMonitoring, "PVI_VOLTAGE_MONITORING_SLOPE_UP"
+                )[2],
+                "slopeDown": rscpFindTag(
+                    voltageMonitoring, "PVI_VOLTAGE_MONITORING_SLOPE_DOWN"
+                )[2],
+            },
+            "powerMode": rscpFindTag(req, "PVI_POWER_MODE")[2],
+            "systemMode": rscpFindTag(req, "PVI_SYSTEM_MODE")[2],
+            "maxPhaseCount": maxPhaseCount,
+            "maxStringCount": maxStringCount,
+            "frequency": {
+                "under": rscpFindTag(frequency, "PVI_FREQUENCY_UNDER")[2],
+                "over": rscpFindTag(frequency, "PVI_FREQUENCY_OVER")[2],
+            },
+            "temperature": {
+                "max": rscpFindTag(
+                    rscpFindTag(req, "PVI_MAX_TEMPERATURE"), "PVI_VALUE"
+                )[2],
+                "min": rscpFindTag(
+                    rscpFindTag(req, "PVI_MIN_TEMPERATURE"), "PVI_VALUE"
+                )[2],
+                "values": [],
+            },
+            "acMaxApparentPower": rscpFindTag(
+                rscpFindTag(req, "PVI_AC_MAX_APPARENTPOWER"), "PVI_VALUE"
+            )[2],
+            "deviceState": {
+                "connected": rscpFindTag(deviceState, "PVI_DEVICE_CONNECTED")[2],
+                "working": rscpFindTag(deviceState, "PVI_DEVICE_WORKING")[2],
+                "inService": rscpFindTag(deviceState, "PVI_DEVICE_IN_SERVICE")[2],
+            },
+            "phases": {},
+            "strings": {},
+        }
+
+        temperatures = range(0, int(rscpFindTag(req, "PVI_TEMPERATURE_COUNT")[2]))
+        for temperature in temperatures:
+            req = self.sendRequest(
+                (
+                    "PVI_REQ_DATA",
+                    "Container",
+                    [
+                        ("PVI_INDEX", "Uint16", pviIndex),
+                        ("PVI_REQ_TEMPERATURE", "Uint16", temperature),
+                    ],
+                ),
+                keepAlive=True,
+            )
+            outObj["temperature"]["values"].append(
+                round(
+                    rscpFindTag(rscpFindTag(req, "PVI_TEMPERATURE"), "PVI_VALUE")[2], 2
+                )
+            )
+
+        if phase is None:
+            phases = range(0, maxPhaseCount)
+        elif isinstance(phase, list):
+            phases = phase
+        else:
+            phases = [phase]
+
+        for phase in phases:
+            req = self.sendRequest(
+                (
+                    "PVI_REQ_DATA",
+                    "Container",
+                    [
+                        ("PVI_INDEX", "Uint16", pviIndex),
+                        ("PVI_REQ_AC_POWER", "Uint16", phase),
+                        ("PVI_REQ_AC_VOLTAGE", "Uint16", phase),
+                        ("PVI_REQ_AC_CURRENT", "Uint16", phase),
+                        ("PVI_REQ_AC_APPARENTPOWER", "Uint16", phase),
+                        ("PVI_REQ_AC_REACTIVEPOWER", "Uint16", phase),
+                        ("PVI_REQ_AC_ENERGY_ALL", "Uint16", phase),
+                        ("PVI_REQ_AC_ENERGY_GRID_CONSUMPTION", "Uint16", phase),
+                    ],
+                ),
+                keepAlive=True,
+            )
+            phaseobj = {
+                "power": round(
+                    rscpFindTag(rscpFindTag(req, "PVI_AC_POWER"), "PVI_VALUE")[2], 2
+                ),
+                "voltage": round(
+                    rscpFindTag(rscpFindTag(req, "PVI_AC_VOLTAGE"), "PVI_VALUE")[2], 2
+                ),
+                "current": round(
+                    rscpFindTag(rscpFindTag(req, "PVI_AC_CURRENT"), "PVI_VALUE")[2], 2
+                ),
+                "apparentPower": round(
+                    rscpFindTag(rscpFindTag(req, "PVI_AC_APPARENTPOWER"), "PVI_VALUE")[
+                        2
+                    ],
+                    2,
+                ),
+                "reactivePower": round(
+                    rscpFindTag(rscpFindTag(req, "PVI_AC_REACTIVEPOWER"), "PVI_VALUE")[
+                        2
+                    ],
+                    2,
+                ),
+                "energyAll": round(
+                    rscpFindTag(rscpFindTag(req, "PVI_AC_ENERGY_ALL"), "PVI_VALUE")[2],
+                    2,
+                ),
+                "energyGridConsumption": round(
+                    rscpFindTag(
+                        rscpFindTag(req, "PVI_AC_ENERGY_GRID_CONSUMPTION"), "PVI_VALUE"
+                    )[2],
+                    2,
+                ),
+            }
+            outObj["phases"][str(phase)] = phaseobj
+
+        if string is None:
+            strings = range(0, usedStringCount)
+        elif isinstance(string, list):
+            strings = string
+        else:
+            strings = [string]
+
+        for string in strings:
+            req = self.sendRequest(
+                (
+                    "PVI_REQ_DATA",
+                    "Container",
+                    [
+                        ("PVI_INDEX", "Uint16", pviIndex),
+                        ("PVI_REQ_DC_POWER", "Uint16", string),
+                        ("PVI_REQ_DC_VOLTAGE", "Uint16", string),
+                        ("PVI_REQ_DC_CURRENT", "Uint16", string),
+                        ("PVI_REQ_DC_STRING_ENERGY_ALL", "Uint16", string),
+                    ],
+                ),
+                keepAlive=keepAlive if string == strings else True,
+            )
+            stringobj = {
+                "power": round(
+                    rscpFindTag(rscpFindTag(req, "PVI_DC_POWER"), "PVI_VALUE")[2], 2
+                ),
+                "voltage": round(
+                    rscpFindTag(rscpFindTag(req, "PVI_DC_VOLTAGE"), "PVI_VALUE")[2], 2
+                ),
+                "current": round(
+                    rscpFindTag(rscpFindTag(req, "PVI_DC_CURRENT"), "PVI_VALUE")[2], 2
+                ),
+                "energyAll": round(
+                    rscpFindTag(
+                        rscpFindTag(req, "PVI_DC_STRING_ENERGY_ALL"), "PVI_VALUE"
+                    )[2],
+                    2,
+                ),
+            }
+            outObj["strings"][str(string)] = stringobj
+
+        return outObj
+
+    def get_power_data(self, pmIndex=None, keepAlive=False):
+        """Polls the power meter data via rscp protocol locally
+
+        Returns:
+            Dictionary containing the power data structured as follows:
+                {
+                    'maxPhasePower': max power of the device
+                    'power': {
+                        'L1': L1 power
+                        'L2': L2 power
+                        'L3': L3 power
+                    }
+                }
+        """
+
+        if pmIndex is None:
+            pmIndex = self.pmIndex
+
+        res = self.sendRequest(
+            (
+                "PM_REQ_DATA",
+                "Container",
+                [
+                    ("PM_INDEX", "Uint16", pmIndex),
+                    ("PM_REQ_POWER_L1", "None", None),
+                    ("PM_REQ_POWER_L2", "None", None),
+                    ("PM_REQ_POWER_L3", "None", None),
+                    ("PM_REQ_VOLTAGE_L1", "None", None),
+                    ("PM_REQ_VOLTAGE_L2", "None", None),
+                    ("PM_REQ_VOLTAGE_L3", "None", None),
+                    ("PM_REQ_ENERGY_L1", "None", None),
+                    ("PM_REQ_ENERGY_L2", "None", None),
+                    ("PM_REQ_ENERGY_L3", "None", None),
+                    ("PM_REQ_MAX_PHASE_POWER", "None", None),
+                    ("PM_REQ_ACTIVE_PHASES", "None", None),
+                    ("PM_REQ_TYPE", "None", None),
+                    ("PM_REQ_MODE", "None", None),
                 ],
             ),
             keepAlive=keepAlive,
         )
 
-        deviceStateContainer = rscpFindTag(req, "PVI_DEVICE_STATE")
-
-        acApparentPower = round(
-            rscpFindTag(rscpFindTag(req, "PVI_AC_APPARENTPOWER"), "PVI_VALUE")[2], 2
-        )
-        acCurrent = round(
-            rscpFindTag(rscpFindTag(req, "PVI_AC_CURRENT"), "PVI_VALUE")[2], 2
-        )
-        acEnergyAll = round(
-            rscpFindTag(rscpFindTag(req, "PVI_AC_ENERGY_ALL"), "PVI_VALUE")[2], 2
-        )
-        acPower = round(
-            rscpFindTag(rscpFindTag(req, "PVI_AC_POWER"), "PVI_VALUE")[2], 2
-        )
-        acReactivePower = round(
-            rscpFindTag(rscpFindTag(req, "PVI_AC_REACTIVEPOWER"), "PVI_VALUE")[2], 2
-        )
-        acVoltage = round(
-            rscpFindTag(rscpFindTag(req, "PVI_AC_VOLTAGE"), "PVI_VALUE")[2], 2
-        )
-        dcCurrent = round(
-            rscpFindTag(rscpFindTag(req, "PVI_DC_CURRENT"), "PVI_VALUE")[2], 2
-        )
-        dcPower = round(
-            rscpFindTag(rscpFindTag(req, "PVI_DC_POWER"), "PVI_VALUE")[2], 2
-        )
-        dcVoltage = round(
-            rscpFindTag(rscpFindTag(req, "PVI_DC_VOLTAGE"), "PVI_VALUE")[2], 2
-        )
-        deviceConnected = rscpFindTag(deviceStateContainer, "PVI_DEVICE_CONNECTED")[2]
-        deviceInService = rscpFindTag(deviceStateContainer, "PVI_DEVICE_IN_SERVICE")[2]
-        deviceWorking = rscpFindTag(deviceStateContainer, "PVI_DEVICE_WORKING")[2]
-        lastError = rscpFindTag(req, "PVI_LAST_ERROR")[2]
-        temperature = round(
-            rscpFindTag(rscpFindTag(req, "PVI_TEMPERATURE"), "PVI_VALUE")[2], 2
-        )
+        activePhasesChar = rscpFindTag(res, "PM_ACTIVE_PHASES")[2]
+        activePhases = f"{activePhasesChar:03b}"
 
         outObj = {
-            "stringIndex": stringIndex,
-            "pviTracker": pviTracker,
-            "acApparentPower": acApparentPower,
-            "acCurrent": acCurrent,
-            "acEnergyAll": acEnergyAll,
-            "acPower": acPower,
-            "acReactivePower": acReactivePower,
-            "acVoltage": acVoltage,
-            "dcCurrent": dcCurrent,
-            "dcPower": dcPower,
-            "dcVoltage": dcVoltage,
-            "deviceConnected": deviceConnected,
-            "deviceInService": deviceInService,
-            "deviceWorking": deviceWorking,
-            "lastError": lastError,
-            "temperature": temperature,
+            "power": {
+                "L1": rscpFindTag(res, "PM_POWER_L1")[2],
+                "L2": rscpFindTag(res, "PM_POWER_L2")[2],
+                "L3": rscpFindTag(res, "PM_POWER_L3")[2],
+            },
+            "voltage": {
+                "L1": rscpFindTag(res, "PM_VOLTAGE_L1")[2],
+                "L2": rscpFindTag(res, "PM_VOLTAGE_L2")[2],
+                "L3": rscpFindTag(res, "PM_VOLTAGE_L3")[2],
+            },
+            "energy": {
+                "L1": rscpFindTag(res, "PM_ENERGY_L1")[2],
+                "L2": rscpFindTag(res, "PM_ENERGY_L2")[2],
+                "L3": rscpFindTag(res, "PM_ENERGY_L3")[2],
+            },
+            "maxPhasePower": rscpFindTag(res, "PM_MAX_PHASE_POWER")[2],
+            "activePhases": activePhases,
+            "type": rscpFindTag(res, "PM_TYPE")[2],
+            "mode": rscpFindTag(res, "PM_MODE")[2],
         }
         return outObj
 
-    def get_power_data(self, keepAlive=False):
-        """Polls the inverter data via rscp protocol locally
+    def get_power_data_ext(self, pmIndexExt=None, keepAlive=False):
+        """Polls the external power meter data via rscp protocol locally"""
 
-        Returns:
-            Dictionary containing the power data structured as follows:
-                {
-                    'maxPhasePower': max power of the device
-                    'power': {
-                        'L1': L1 power
-                        'L2': L2 power
-                        'L3': L3 power
-                    }
-                }
-        """
-        res = self.sendRequest(
-            (
-                "PM_REQ_DATA",
-                "Container",
-                [
-                    ("PM_INDEX", "Uint16", self.pmIndex),
-                    ("PM_REQ_POWER_L1", "None", None),
-                    ("PM_REQ_POWER_L2", "None", None),
-                    ("PM_REQ_POWER_L3", "None", None),
-                    ("PM_REQ_MAX_PHASE_POWER", "None", None),
-                ],
-            )
-        )
-        powerL1 = rscpFindTag(res, "PM_POWER_L1")[2]
-        powerL2 = rscpFindTag(res, "PM_POWER_L2")[2]
-        powerL3 = rscpFindTag(res, "PM_POWER_L3")[2]
-        maxPhasePower = rscpFindTag(res, "PM_MAX_PHASE_POWER")[2]
+        if pmIndexExt is None:
+            pmIndexExt = self.pmIndexExt
 
-        outObj = {
-            "power": {"L1": powerL1, "L2": powerL2, "L3": powerL3},
-            "maxPhasePower": maxPhasePower,
-        }
-        return outObj
-
-    def get_power_data_ext(self, keepAlive=False):
-        """Polls the external inverter data via rscp protocol locally
-
-        Returns:
-            Dictionary containing the power data structured as follows:
-                {
-                    'maxPhasePower': max power of the device
-                    'power': {
-                        'L1': L1 power
-                        'L2': L2 power
-                        'L3': L3 power
-                    }
-                }
-        """
-        res = self.sendRequest(
-            (
-                "PM_REQ_DATA",
-                "Container",
-                [
-                    ("PM_INDEX", "Uint16", self.pmIndexExt),
-                    ("PM_REQ_POWER_L1", "None", None),
-                    ("PM_REQ_POWER_L2", "None", None),
-                    ("PM_REQ_POWER_L3", "None", None),
-                    ("PM_REQ_MAX_PHASE_POWER", "None", None),
-                ],
-            )
-        )
-        powerL1 = rscpFindTag(res, "PM_POWER_L1")[2]
-        powerL2 = rscpFindTag(res, "PM_POWER_L2")[2]
-        powerL3 = rscpFindTag(res, "PM_POWER_L3")[2]
-        maxPhasePower = rscpFindTag(res, "PM_MAX_PHASE_POWER")[2]
-
-        outObj = {
-            "power": {"L1": powerL1, "L2": powerL2, "L3": powerL3},
-            "maxPhasePower": maxPhasePower,
-        }
-        return outObj
+        return get_power_data(pmIndexExt, keepAlive)
 
     def get_power_settings(self, keepAlive=False):
         """

@@ -213,6 +213,7 @@ def rscpDecode(data):
         val = rscpTags.getErrorcode(int.from_bytes(val, "little"))
     elif isinstance(val, bytes) and strType == "CString":
         # return string instead of bytes
-        val = val.decode("utf-8")
+        # ignore none utf-8 bytes
+        val = val.decode("utf-8", "ignore")
 
     return (strTag, strType, val), headerSize + struct.calcsize(fmt)
