@@ -128,6 +128,8 @@ class E3DC:
         self.get_system_info_static(keepAlive=True)
 
     def _set_serial(self, serial):
+        self.batIndex = 0
+        self.pmIndexExt = 1
         if serial[0].isdigit():
             self.serialNumber = serial
         else:
@@ -136,31 +138,26 @@ class E3DC:
         if self.serialNumber.startswith("4"):
             self.model = "S10E"
             self.pmIndex = 0
-            self.pmIndexExt = 1
             if not self.serialNumberPrefix:
                 self.serialNumberPrefix = "S10-"
         elif self.serialNumber.startswith("5"):
             self.model = "S10mini"
             self.pmIndex = 6
-            self.pmIndexExt = 1
             if not self.serialNumberPrefix:
                 self.serialNumberPrefix = "S10-"
         elif self.serialNumber.startswith("6"):
             self.model = "Quattroporte"
             self.pmIndex = 6
-            self.pmIndexExt = 1
             if not self.serialNumberPrefix:
                 self.serialNumberPrefix = "Q10-"
         elif self.serialNumber.startswith("7"):
             self.model = "Pro"
             self.pmIndex = 6
-            self.pmIndexExt = 1
             if not self.serialNumberPrefix:
                 self.serialNumberPrefix = "P10-"
         else:
             self.model = "NA"
             self.pmIndex = 0
-            self.pmIndexExt = 1
 
     def connect_local(self):
         pass
@@ -966,7 +963,7 @@ class E3DC:
         outObj = {k: SystemStatusBools[v] for k, v in outObj.items()}
         return outObj
 
-    def get_battery_data(self, batIndex=0, dcb=None, keepAlive=False):
+    def get_battery_data(self, batIndex=None, dcb=None, keepAlive=False):
         """Polls the baterry data via rscp protocol locally
 
         Returns:
@@ -994,6 +991,9 @@ class E3DC:
                     'usuableRemainingCapacity': usuable remaining capacity
                 }
         """
+
+        if batIndex is None:
+            batIndex = self.batIndex
 
         req = self.sendRequest(
             (
@@ -1033,8 +1033,6 @@ class E3DC:
             ),
             keepAlive=True,
         )
-
-        print(req)
 
         dcbCount = rscpFindTag(req, "BAT_DCB_COUNT")[2]
         deviceStateContainer = rscpFindTag(req, "BAT_DEVICE_STATE")
@@ -1093,7 +1091,7 @@ class E3DC:
 
         if dcb is None:
             dcbs = range(0, dcbCount)
-        elif isinstance(dcbIndex, list):
+        elif isinstance(dcb, list):
             dcbs = dcb
         else:
             dcbs = [dcb]
@@ -1110,7 +1108,9 @@ class E3DC:
                         ("BAT_REQ_DCB_INFO", "Uint16", dcb),
                     ],
                 ),
-                keepAlive=keepAlive if dcb == dcbs else True,
+                keepAlive=True
+                if dcb != dcbs[-1]
+                else keepAlive,  # last request should honor keepAlive
             )
 
             info = rscpFindTag(req, "BAT_DCB_INFO")
@@ -1398,7 +1398,9 @@ class E3DC:
                         ("PVI_REQ_DC_STRING_ENERGY_ALL", "Uint16", string),
                     ],
                 ),
-                keepAlive=keepAlive if string == strings else True,
+                keepAlive=True
+                if string != strings[-1]
+                else keepAlive,  # last request should honor keepAlive
             )
             stringobj = {
                 "power": round(
@@ -1418,7 +1420,6 @@ class E3DC:
                 ),
             }
             outObj["strings"][str(string)] = stringobj
-
         return outObj
 
     def get_power_data(self, pmIndex=None, keepAlive=False):
@@ -1473,9 +1474,9 @@ class E3DC:
                 "L3": rscpFindTag(res, "PM_POWER_L3")[2],
             },
             "voltage": {
-                "L1": rscpFindTag(res, "PM_VOLTAGE_L1")[2],
-                "L2": rscpFindTag(res, "PM_VOLTAGE_L2")[2],
-                "L3": rscpFindTag(res, "PM_VOLTAGE_L3")[2],
+                "L1": round(rscpFindTag(res, "PM_VOLTAGE_L1")[2], 4),
+                "L2": round(rscpFindTag(res, "PM_VOLTAGE_L2")[2], 4),
+                "L3": round(rscpFindTag(res, "PM_VOLTAGE_L3")[2], 4),
             },
             "energy": {
                 "L1": rscpFindTag(res, "PM_ENERGY_L1")[2],
@@ -1486,6 +1487,7 @@ class E3DC:
             "activePhases": activePhases,
             "type": rscpFindTag(res, "PM_TYPE")[2],
             "mode": rscpFindTag(res, "PM_MODE")[2],
+            "index": pmIndex,
         }
         return outObj
 
@@ -1495,7 +1497,7 @@ class E3DC:
         if pmIndexExt is None:
             pmIndexExt = self.pmIndexExt
 
-        return get_power_data(pmIndexExt, keepAlive)
+        return self.get_power_data(pmIndexExt, keepAlive)
 
     def get_power_settings(self, keepAlive=False):
         """
