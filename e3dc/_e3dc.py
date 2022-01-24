@@ -43,7 +43,7 @@ class SendError(Exception):
 
 
 class E3DC:
-    """A class describing an E3DC system, used to poll the status from the portal"""
+    """A class describing an E3DC system."""
 
     CONNECT_LOCAL = 1
     CONNECT_WEB = 2
@@ -59,21 +59,22 @@ class E3DC:
     IDLE_TYPE = {"idleCharge": 0, "idleDischarge": 1}
 
     def __init__(self, connectType, **kwargs):
-        """Constructor of a E3DC object (does not connect)
+        """Constructor of a E3DC object.
 
         Args:
-            connectType:
-                E3DC.CONNECT_LOCAL: use local rscp connection^
-                E3DC.CONNECT_WEB: use web connection
-            **kwargs:
-                username (str): username
-                password (str): password (plain text)
-                ipAddress (str): IP address of the E3DC system - required for CONNECT_LOCAL
-                key (str): encryption key as set in the E3DC settings - required for CONNECT_LOCAL
-                serialNumber (str): the serial number of the system to monitor - required for CONNECT_WEB
-                isPasswordMd5 (Optional[bool]): indicates whether the password is already md5 digest (recommended, default = True) - required for CONNECT_WEB
-        """
+            connectType: can be one of the following
+                E3DC.CONNECT_LOCAL use local rscp connection
+                E3DC.CONNECT_WEB use web connection
+            **kwargs: Arbitrary keyword argument
 
+        Keyword Args:
+            username (str): username
+            password (str): password (plain text)
+            ipAddress (str): IP address of the E3DC system - required for CONNECT_LOCAL
+            key (str): encryption key as set in the E3DC settings - required for CONNECT_LOCAL
+            serialNumber (str): the serial number of the system to monitor - required for CONNECT_WEB
+            isPasswordMd5 (Optional[bool]): indicates whether the password is already md5 digest (recommended, default = True) - required for CONNECT_WEB
+        """
         self.connectType = connectType
         self.username = kwargs["username"]
         self.serialNumber = None
@@ -157,7 +158,7 @@ class E3DC:
             self.pmIndex = 0
 
     def connect_web(self):
-        """Connects to the E3DC portal and opens a session
+        """Connects to the E3DC portal and opens a session.
 
         Raises:
             e3dc.AuthenticationError: login error
@@ -204,7 +205,7 @@ class E3DC:
         self.connected = True
 
     def poll_ajax_raw(self):
-        """Polls the portal for the current status
+        """Polls the portal for the current status.
 
         Returns:
             dict: Dictionary containing the status information in raw format as returned by the portal
@@ -212,7 +213,6 @@ class E3DC:
         Raises:
             e3dc.PollError in case of problems polling
         """
-
         if not self.connected:
             self.connect_web()
 
@@ -238,13 +238,14 @@ class E3DC:
         return json.loads(jsonResponse["CONTENT"])
 
     def poll_ajax(self, **kwargs):
-        """Polls the portal for the current status and returns a digest
+        """Polls the portal for the current status and returns a digest.
 
         Args:
             **kwars: argument list
 
         Returns:
-            dict: Dictionary containing the condensed status information structured as follows:
+            dict: Dictionary containing the condensed status information structured as follows::
+
                 {
                     "autarky": <autarky in %>,
                     "consumption": {
@@ -307,13 +308,14 @@ class E3DC:
         return outObj
 
     def poll_rscp(self, keepAlive=False):
-        """Polls via rscp protocol locally
+        """Polls via rscp protocol locally.
 
         Args:
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            dict: Dictionary containing the condensed status information structured as follows:
+            dict: Dictionary containing the condensed status information structured as follows::
+
                 {
                     "autarky": <autarky in %>,
                     "consumption": {
@@ -375,25 +377,23 @@ class E3DC:
         return outObj
 
     def poll_switches(self, keepAlive=False):
-        """
-        This function uses the RSCP interface to poll the switch status
+        """This function uses the RSCP interface to poll the switch status.
 
         Args:
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            list[dict]: list of the switches
+            list[dict]: list of the switches::
 
-            [
-                {
-                    "id": <id>,
-                    "type": <type>,
-                    "name": <name>,
-                    "status": <status>
-                }
-            ]
+                [
+                    {
+                        "id": <id>,
+                        "type": <type>,
+                        "name": <name>,
+                        "status": <status>
+                    }
+                ]
         """
-
         if not self.rscp.isConnected():
             self.rscp.connect()
 
@@ -426,8 +426,7 @@ class E3DC:
         return switchList
 
     def set_switch_onoff(self, switchID, value, keepAlive=False):
-        """
-        This function uses the RSCP interface to turn a switch on or off
+        """This function uses the RSCP interface to turn a switch on or off.
 
         Args:
             switchID (int): id of the switch
@@ -438,7 +437,6 @@ class E3DC:
             True/False
 
         """
-
         cmd = "on" if value else "off"
 
         result = self.sendRequest(
@@ -459,8 +457,8 @@ class E3DC:
             return False  # operation did not succeed
 
     def sendRequest(self, request, retries=3, keepAlive=False):
-        """
-        This function uses the RSCP interface to make an request
+        """This function uses the RSCP interface to make a request.
+
         Does make retries in case of exceptions like Socket.Error
 
         Args:
@@ -497,13 +495,13 @@ class E3DC:
         return result
 
     def get_idle_periods(self, keepAlive=False):
-        """poll via rscp protocol to get idle periods
+        """Poll via rscp protocol to get idle periods.
 
         Args:
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            dict: Dictionary containing the idle periods
+            dict: Dictionary containing the idle periods structured as follows::
 
                 {
                     "idleCharge":
@@ -519,7 +517,7 @@ class E3DC:
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            [
+                            ]
                             "active": <boolean of state>
                         }
                     ],
@@ -536,7 +534,7 @@ class E3DC:
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            [
+                            ]
                             "active": <boolean of state>
                         }
                     ]
@@ -576,10 +574,11 @@ class E3DC:
         return idlePeriods
 
     def set_idle_periods(self, idlePeriods, keepAlive=False):
-        """set idle periods via rscp protocol
+        """Set idle periods via rscp protocol.
 
         Args:
-            idlePeriods (dict): Dictionary containing one or many idle periods
+            idlePeriods (dict): Dictionary containing one or many idle periods::
+
                 {
                     "idleCharge":
                     [
@@ -594,7 +593,7 @@ class E3DC:
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            [
+                            ]
                             "active": <boolean of state>
                         }
                     ],
@@ -611,7 +610,7 @@ class E3DC:
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            [
+                            ]
                             "active": <boolean of state>
                         }
                     ]
@@ -622,7 +621,6 @@ class E3DC:
             True if success
             False if error
         """
-
         periodList = []
 
         if not isinstance(idlePeriods, dict):
@@ -771,8 +769,7 @@ class E3DC:
     def get_db_data(
         self, startDate: datetime.date = None, timespan: str = "DAY", keepAlive=False
     ):
-        """
-        Reads DB data and summed up values for the given timespan via rscp protocol locally
+        """Reads DB data and summed up values for the given timespan via rscp protocol locally.
 
         Args:
             startDate (datetime.date): start date for timespan, default today
@@ -780,21 +777,20 @@ class E3DC:
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            dict: Dictionary containing the stored db information structured as follows:
+            dict: Dictionary containing the stored db information structured as follows::
 
-            {
-                "autarky": <autarky in the period in %>,
-                "bat_power_in": <power entering battery, charging>,
-                "bat_power_out": <power leavinb battery, discharging>,
-                "consumed_production": <power directly consumed in %>,
-                "consumption": <self consumed power>,
-                "grid_power_in": <power taken from the grid>,
-                "grid_power_out": <power into the grid>,
-                "stateOfCharge": <battery charge level in %>,
-                "solarProduction": <power production>,
-            }
+                {
+                    "autarky": <autarky in the period in %>,
+                    "bat_power_in": <power entering battery, charging>,
+                    "bat_power_out": <power leavinb battery, discharging>,
+                    "consumed_production": <power directly consumed in %>,
+                    "consumption": <self consumed power>,
+                    "grid_power_in": <power taken from the grid>,
+                    "grid_power_out": <power into the grid>,
+                    "stateOfCharge": <battery charge level in %>,
+                    "solarProduction": <power production>,
+                }
         """
-
         span: int = 0
         if startDate is None:
             startDate = datetime.date.today()
@@ -844,8 +840,11 @@ class E3DC:
         return outObj
 
     def get_system_info_static(self, keepAlive=False):
-        """Polls the static system info via rscp protocol locally"""
+        """Polls the static system info via rscp protocol locally.
 
+        Args:
+            keepAlive (Optional[bool]): True to keep connection alive
+        """
         self.deratePercent = round(
             self.sendRequest(
                 ("EMS_REQ_DERATE_AT_PERCENT_VALUE", "None", None), keepAlive=True
@@ -895,13 +894,14 @@ class E3DC:
         return True
 
     def get_system_info(self, keepAlive=False):
-        """Polls the system info via rscp protocol locally
+        """Polls the system info via rscp protocol locally.
 
         Args:
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            dict: Dictionary containing the system info structured as follows:
+            dict: Dictionary containing the system info structured as follows::
+
                 {
                     "deratePercent": <% of installed peak power the feed in will be derated>,
                     "deratePower": <W at which the feed in will be derated>,
@@ -917,7 +917,6 @@ class E3DC:
                     "serial": <serial number of the system>
                 }
         """
-
         # use keepAlive setting for last request
         sw = self.sendRequest(
             ("INFO_REQ_SW_RELEASE", "None", None), keepAlive=keepAlive
@@ -942,13 +941,14 @@ class E3DC:
         return outObj
 
     def get_system_status(self, keepAlive=False):
-        """Polls the system status via rscp protocol locally
+        """Polls the system status via rscp protocol locally.
 
         Args:
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            dict: Dictionary containing the system status structured as follows:
+            dict: Dictionary containing the system status structured as follows::
+
                 {
                     "dcdcAlive": <dcdc alive>,
                     "powerMeterAlive": <power meter alive>,
@@ -972,7 +972,6 @@ class E3DC:
                     "socSyncRequested": <soc sync requested>
                 }
         """
-
         # use keepAlive setting for last request
         sw = self.sendRequest(
             ("EMS_REQ_SYS_STATUS", "None", None), keepAlive=keepAlive
@@ -1006,7 +1005,7 @@ class E3DC:
         return outObj
 
     def get_battery_data(self, batIndex=None, dcb=None, keepAlive=False):
-        """Polls the baterry data via rscp protocol locally
+        """Polls the baterry data via rscp protocol locally.
 
         Args:
             batIndex (Optional[int]): battery index
@@ -1014,7 +1013,7 @@ class E3DC:
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            dict: Dictionary containing the battery data structured as follows:
+            dict: Dictionary containing the battery data structured as follows::
 
                 {
                     "asoc": <absolute state of charge>,
@@ -1023,7 +1022,7 @@ class E3DC:
                     "dcbCount": <dcb count>,
                     "dcbs": {"0":
                         {
-                            "current": <curennt>,
+                            "current": <current>,
                             "currentAvg30s": <current average 30s>,
                             "cycleCount": <cycle count>,
                             "designCapacity": <design capacity>,
@@ -1088,7 +1087,6 @@ class E3DC:
                     "usuableRemainingCapacity": <usuable remaining capacity>
                 }
         """
-
         if batIndex is None:
             batIndex = self.batIndex
 
@@ -1275,7 +1273,8 @@ class E3DC:
         return outObj
 
     def get_pvi_data(self, pviIndex=0, string=None, phase=None, keepAlive=False):
-        """Polls the inverter data via rscp protocol locally
+        """Polls the inverter data via rscp protocol locally.
+
         Args:
             pviIndex (Optional[int]): pv inverter index
             string (Union[int, list]): string list
@@ -1283,68 +1282,67 @@ class E3DC:
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            dict: Dictionary containing the pvi data structured as follows:
+            dict: Dictionary containing the pvi data structured as follows::
 
-            {
-                "acMaxApparentPower": <max apparent AC power>,
-                "cosPhi": {
-                    "active": <active>,
-                    "value": <value>,
-                    "excited": <excited>
-                },
-                "deviceState": {
-                    "connected": <connected>,
-                    "working": <working>,
-                    "inService": <in service>
-                },
-                "frequency": {
-                    "under": <frequency under>,
-                    "over": <frequency over>
-                },
-                "index": <pviIndex>,
-                "lastError": <last error>,
-                "maxPhaseCount": <max phase count>,
-                "maxStringCount": <max string count>,
-                "onGrid": <on grid>,
-                "phases": { "0":
-                    {
-                        "power": <power>,
-                        "voltage": <voltage>,
-                        "current": <current>,
-                        "apparentPower": <apparent power>,
-                        "reactivePower": <reactive power>,
-                        "energyAll": <energy all>,
-                        "energyGridConsumption": <energy grid consumption>
+                {
+                    "acMaxApparentPower": <max apparent AC power>,
+                    "cosPhi": {
+                        "active": <active>,
+                        "value": <value>,
+                        "excited": <excited>
+                    },
+                    "deviceState": {
+                        "connected": <connected>,
+                        "working": <working>,
+                        "inService": <in service>
+                    },
+                    "frequency": {
+                        "under": <frequency under>,
+                        "over": <frequency over>
+                    },
+                    "index": <pviIndex>,
+                    "lastError": <last error>,
+                    "maxPhaseCount": <max phase count>,
+                    "maxStringCount": <max string count>,
+                    "onGrid": <on grid>,
+                    "phases": { "0":
+                        {
+                            "power": <power>,
+                            "voltage": <voltage>,
+                            "current": <current>,
+                            "apparentPower": <apparent power>,
+                            "reactivePower": <reactive power>,
+                            "energyAll": <energy all>,
+                            "energyGridConsumption": <energy grid consumption>
+                        }
+                    },
+                    "powerMode": <power mode>,
+                    "serialNumber": <serial number>,
+                    "state": <state>,
+                    "strings": { "0":
+                        {
+                            "power": <power>,
+                            "voltage": <voltage>,
+                            "current": <current>,
+                            "energyAll": <energy all>
+                        }
+                    },
+                    "systemMode": <system mode>,
+                    "temperature": {
+                        "max": <max temperature>,
+                        "min": <min temperature>,
+                        "values": [<value>,<value>],
+                    },
+                    "type": <type>,
+                    "version": <version>,
+                    "voltageMonitoring": {
+                        "thresholdTop": <voltage threshold top>,
+                        "thresholdBottom": <voltage threshold bottom>,
+                        "slopeUp": <voltage slope up>,
+                        "slopeDown": <voltage slope down>,
                     }
-                },
-                "powerMode": <power mode>,
-                "serialNumber": <serial number>,
-                "state": <state>,
-                "strings": { "0":
-                    {
-                        "power": <power>,
-                        "voltage": <voltage>,
-                        "current": <current>,
-                        "energyAll": <energy all>
-                    }
-                },
-                "systemMode": <system mode>,
-                "temperature": {
-                    "max": <max temperature>,
-                    "min": <min temperature>,
-                    "values": [<value>,<value>],
-                },
-                "type": <type>,
-                "version": <version>,
-                "voltageMonitoring": {
-                    "thresholdTop": <voltage threshold top>,
-                    "thresholdBottom": <voltage threshold bottom>,
-                    "slopeUp": <voltage slope up>,
-                    "slopeDown": <voltage slope down>,
                 }
-            }
         """
-
         req = self.sendRequest(
             (
                 "PVI_REQ_DATA",
@@ -1566,39 +1564,38 @@ class E3DC:
         return outObj
 
     def get_power_data(self, pmIndex=None, keepAlive=False):
-        """Polls the power meter data via rscp protocol locally
+        """Polls the power meter data via rscp protocol locally.
 
         Args:
             pmIndex (Optional[int]): power meter index
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            dict: Dictionary containing the power data.
+            dict: Dictionary containing the power data structured as follows::
 
-            {
-                "activePhases": <active phases>,
-                "energy": {
-                    "L1": <L1 energy>,
-                    "L2": <L2 energy>,
-                    "L3": <L3 energy>
-                },
-                "index": <pm index>,
-                "maxPhasePower": <max phase power>,
-                "mode": <mode>,
-                "power": {
-                    "L1": <L1 power>,
-                    "L2": <L2 power>,
-                    "L3": <L3 power>
-                },
-                "type": <type>,
-                "voltage": {
-                    "L1": <L1 voltage>,
-                    "L2": <L1 voltage>,
-                    "L3": <L1 voltage>
+                {
+                    "activePhases": <active phases>,
+                    "energy": {
+                        "L1": <L1 energy>,
+                        "L2": <L2 energy>,
+                        "L3": <L3 energy>
+                    },
+                    "index": <pm index>,
+                    "maxPhasePower": <max phase power>,
+                    "mode": <mode>,
+                    "power": {
+                        "L1": <L1 power>,
+                        "L2": <L2 power>,
+                        "L3": <L3 power>
+                    },
+                    "type": <type>,
+                    "voltage": {
+                        "L1": <L1 voltage>,
+                        "L2": <L1 voltage>,
+                        "L3": <L1 voltage>
+                    }
                 }
-            }
         """
-
         if pmIndex is None:
             pmIndex = self.pmIndex
 
@@ -1654,65 +1651,62 @@ class E3DC:
         return outObj
 
     def get_power_data_ext(self, pmIndexExt=None, keepAlive=False):
-        """Polls the external power meter data via rscp protocol locally
+        """Polls the external power meter data via rscp protocol locally.
 
         Args:
             pmIndex (Optional[int]): power meter index
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            dict: Dictionary containing the power data.
+            dict: Dictionary containing the power data structured as follows::
 
-            {
-                "activePhases": <active phases>,
-                "energy": {
-                    "L1": <L1 energy>,
-                    "L2": <L2 energy>,
-                    "L3": <L3 energy>
-                },
-                "index": <pm index>,
-                "maxPhasePower": <max phase power>,
-                "mode": <mode>,
-                "power": {
-                    "L1": <L1 power>,
-                    "L2": <L2 power>,
-                    "L3": <L3 power>
-                },
-                "type": <type>,
-                "voltage": {
-                    "L1": <L1 voltage>,
-                    "L2": <L1 voltage>,
-                    "L3": <L1 voltage>
+                {
+                    "activePhases": <active phases>,
+                    "energy": {
+                        "L1": <L1 energy>,
+                        "L2": <L2 energy>,
+                        "L3": <L3 energy>
+                    },
+                    "index": <pm index>,
+                    "maxPhasePower": <max phase power>,
+                    "mode": <mode>,
+                    "power": {
+                        "L1": <L1 power>,
+                        "L2": <L2 power>,
+                        "L3": <L3 power>
+                    },
+                    "type": <type>,
+                    "voltage": {
+                        "L1": <L1 voltage>,
+                        "L2": <L1 voltage>,
+                        "L3": <L1 voltage>
+                    }
                 }
-            }
         """
-
         if pmIndexExt is None:
             pmIndexExt = self.pmIndexExt
 
         return self.get_power_data(pmIndexExt, keepAlive)
 
     def get_power_settings(self, keepAlive=False):
-        """
-        Get Power Settings
+        """Polls the power settings via rscp protocol locally.
 
         Args:
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            dict: Dictionary containing the power settings structured as follows:
+            dict: Dictionary containing the power settings structured as follows::
 
-           {
-            "discharge_start_power": <minimum power requested to enable discharge>,
-            "maxChargePower": <maximum charge power dependent on E3DC model>,
-            "maxDischargePower": <maximum discharge power dependent on E3DC model>,
-            "powerSaveEnabled": <status if power save is enabled>,
-            "powerLimitsUsed": <status if power limites are enabled>,
-            "weatherForecastMode": <Weather Forcast Mode>,
-            "weatherRegulatedChargeEnabled": <status if weather regulated charge is enabled>
-           }
+                {
+                    "discharge_start_power": <minimum power requested to enable discharge>,
+                    "maxChargePower": <maximum charge power dependent on E3DC model>,
+                    "maxDischargePower": <maximum discharge power dependent on E3DC model>,
+                    "powerSaveEnabled": <status if power save is enabled>,
+                    "powerLimitsUsed": <status if power limites are enabled>,
+                    "weatherForecastMode": <Weather Forcast Mode>,
+                    "weatherRegulatedChargeEnabled": <status if weather regulated charge is enabled>
+                }
         """
-
         res = self.sendRequest(
             ("EMS_REQ_GET_POWER_SETTINGS", "None", None), keepAlive=keepAlive
         )
@@ -1746,8 +1740,7 @@ class E3DC:
         discharge_start=None,
         keepAlive=False,
     ):
-        """
-        Setting the SmartPower power limits
+        """Setting the SmartPower power limits via rscp protocol locally.
 
         Args:
             enable (bool): True/False
@@ -1761,7 +1754,6 @@ class E3DC:
             -1 if error
             1 if one value is nonoptimal
         """
-
         if max_charge is None:
             max_charge = self.maxBatChargePower
 
@@ -1806,8 +1798,7 @@ class E3DC:
         return return_code
 
     def set_powersave(self, enable, keepAlive=False):
-        """
-        Setting the SmartPower power save
+        """Setting the SmartPower power save via rscp protocol locally.
 
         Args:
             enable (bool): True/False
@@ -1843,8 +1834,7 @@ class E3DC:
             return -1
 
     def set_weather_regulated_charge(self, enable, keepAlive=False):
-        """
-        Setting the SmartCharge weather regulated charge
+        """Setting the SmartCharge weather regulated charge via rscp protocol locally.
 
         Args:
             enable (bool): True/False
