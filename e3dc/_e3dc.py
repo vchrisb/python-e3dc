@@ -62,19 +62,16 @@ class E3DC:
         """Constructor of a E3DC object (does not connect)
 
         Args:
-            connectType: CONNECT_LOCAL: use local rscp connection
-                Named args for CONNECT_LOCAL:
-                username (string): username
-                password (string): password (plain text)
-                ipAddress (string): IP address of the E3DC system
-                key (string): encryption key as set in the E3DC settings
-
-            connectType: CONNECT_WEB: use web connection
-                Named args for CONNECT_WEB:
-                username (string): username
-                password (string): password (plain text or md5 hash)
-                serialNumber (string): the serial number of the system to monitor
-                isPasswordMd5 (boolean, optional): indicates whether the password is already md5 digest (recommended, default = True)
+            connectType:
+                E3DC.CONNECT_LOCAL: use local rscp connection^
+                E3DC.CONNECT_WEB: use web connection
+            **kwargs:
+                username (str): username
+                password (str): password (plain text)
+                ipAddress (str): IP address of the E3DC system - required for CONNECT_LOCAL
+                key (str): encryption key as set in the E3DC settings - required for CONNECT_LOCAL
+                serialNumber (str): the serial number of the system to monitor - required for CONNECT_WEB
+                isPasswordMd5 (Optional[bool]): indicates whether the password is already md5 digest (recommended, default = True) - required for CONNECT_WEB
         """
 
         self.connectType = connectType
@@ -159,9 +156,6 @@ class E3DC:
             self.model = "NA"
             self.pmIndex = 0
 
-    def connect_local(self):
-        pass
-
     def connect_web(self):
         """Connects to the E3DC portal and opens a session
 
@@ -213,7 +207,7 @@ class E3DC:
         """Polls the portal for the current status
 
         Returns:
-            Dictionary containing the status information in raw format as returned by the portal
+            dict: Dictionary containing the status information in raw format as returned by the portal
 
         Raises:
             e3dc.PollError in case of problems polling
@@ -246,22 +240,26 @@ class E3DC:
     def poll_ajax(self, **kwargs):
         """Polls the portal for the current status and returns a digest
 
+        Args:
+            **kwars: argument list
+
         Returns:
-            Dictionary containing the condensed status information structured as follows:
+            dict: Dictionary containing the condensed status information structured as follows:
                 {
-                    'time': datetime object containing the timestamp
-                    'sysStatus': string containing the system status code
-                    'stateOfCharge': battery charge status in %
-                    'consumption': { consumption values: positive means exiting the system
-                        'battery': power entering battery (positive: charging, negative: discharging)
-                        'house': house consumption
-                        'wallbox': wallbox consumption
-                    },
-                    'production': { production values: positive means entering the system
-                        'solar' : production from solar in W
-                        'add' : additional external power in W
-                        'grid' : absorption from grid in W
-                        }
+                    "autarky": <autarky in %>,
+                    "consumption": {
+                        "battery": <power entering battery (positive: charging, negative: discharging)>,
+                        "house": <house consumption>,
+                        "wallbox": <wallbox consumption>
+                    }
+                    "production": {
+                        "solar" : <production from solar in W>,
+                        "add" : <additional external power in W>,
+                        "grid" : <absorption from grid in W>
+                    }
+                    "stateOfCharge": <battery charge status in %>,
+                    "selfConsumption": <self consumed power in %>,
+                    "time": <datetime object containing the timestamp>
                 }
 
         Raises:
@@ -311,23 +309,26 @@ class E3DC:
     def poll_rscp(self, keepAlive=False):
         """Polls via rscp protocol locally
 
+        Args:
+            keepAlive (Optional[bool]): True to keep connection alive
+
         Returns:
-            Dictionary containing the condensed status information structured as follows:
+            dict: Dictionary containing the condensed status information structured as follows:
                 {
-                    'autarky': autarky in %
-                    'consumption': { consumption values: positive means exiting the system
-                        'battery': power entering battery (positive: charging, negative: discharging)
-                        'house': house consumption
-                        'wallbox': wallbox consumption
+                    "autarky": <autarky in %>,
+                    "consumption": {
+                        "battery": <power entering battery (positive: charging, negative: discharging)>,
+                        "house": <house consumption>,
+                        "wallbox": <wallbox consumption>
                     }
-                    'production': { production values: positive means entering the system
-                        'solar' : production from solar in W
-                        'add' : additional external power in W
-                        'grid' : absorption from grid in W
+                    "production": {
+                        "solar" : <production from solar in W>,
+                        "add" : <additional external power in W>,
+                        "grid" : <absorption from grid in W>
                     }
-                    'stateOfCharge': battery charge status in %
-                    'selfConsumption': self consumed power in %
-                    'time': datetime object containing the timestamp
+                    "stateOfCharge": <battery charge status in %>,
+                    "selfConsumption": <self consumed power in %>,
+                    "time": <datetime object containing the timestamp>
                 }
         """
         if (
@@ -376,7 +377,21 @@ class E3DC:
     def poll_switches(self, keepAlive=False):
         """
         This function uses the RSCP interface to poll the switch status
-        if keepAlive is False, the connection is closed afterwards
+
+        Args:
+            keepAlive (Optional[bool]): True to keep connection alive
+
+        Returns:
+            list[dict]: list of the switches
+
+            [
+                {
+                    "id": <id>,
+                    "type": <type>,
+                    "name": <name>,
+                    "status": <status>
+                }
+            ]
         """
 
         if not self.rscp.isConnected():
@@ -391,8 +406,6 @@ class E3DC:
 
         descList = switchDesc[2]  # get the payload of the container
         statusList = switchStatus[2]
-
-        # print switchStatus
 
         switchList = []
 
@@ -415,7 +428,15 @@ class E3DC:
     def set_switch_onoff(self, switchID, value, keepAlive=False):
         """
         This function uses the RSCP interface to turn a switch on or off
-        The switchID is as returned by poll_switches
+
+        Args:
+            switchID (int): id of the switch
+            value (str): value
+            keepAlive (Optional[bool]): True to keep connection alive
+
+        Returns:
+            True/False
+
         """
 
         cmd = "on" if value else "off"
@@ -442,8 +463,14 @@ class E3DC:
         This function uses the RSCP interface to make an request
         Does make retries in case of exceptions like Socket.Error
 
+        Args:
+            request: the request to send
+            retries (Optional[int]): number of retries
+            keepAlive (Optional[bool]): True to keep connection alive
+
         Returns:
             An object with the received data
+
         Raises:
             e3dc.AuthenticationError: login error
             e3dc.SendError: if retries are reached
@@ -472,41 +499,45 @@ class E3DC:
     def get_idle_periods(self, keepAlive=False):
         """poll via rscp protocol to get idle periods
 
+        Args:
+            keepAlive (Optional[bool]): True to keep connection alive
+
         Returns:
-            Dictionary containing the idle periods:
+            dict: Dictionary containing the idle periods
+
                 {
-                    'idleCharge': list of the idle charge times
+                    "idleCharge":
                     [
                         {
-                            'day': the week day from 0 to 6
-                            'start': list of start time
+                            "day": <the week day from 0 to 6>,
+                            "start":
                             [
-                                int: hour from 0 to 23
-                                int: minute from 0 to 59
+                                <hour from 0 to 23>,
+                                <minute from 0 to 59>
                             ]
-                            'end': list of end time
+                            "end":
                             [
-                                int: hour from 0 to 23
-                                int: minute from 0 to 59
+                                <hour from 0 to 23>,
+                                <minute from 0 to 59>
                             [
-                            'active': boolean of state
+                            "active": <boolean of state>
                         }
-                    ]
-                    'idleDischarge': list of the idle discharge times
+                    ],
+                    "idleDischarge":
                     [
                         {
-                            'day': the week day from 0 to 6
-                            'start': list of start time
+                            "day": <the week day from 0 to 6>,
+                            "start":
                             [
-                                int: hour from 0 to 23
-                                int: minute from 0 to 59
+                                <hour from 0 to 23>,
+                                <minute from 0 to 59>
                             ]
-                            'end': list of end time
+                            "end":
                             [
-                                int: hour from 0 to 23
-                                int: minute from 0 to 59
+                                <hour from 0 to 23>,
+                                <minute from 0 to 59>
                             [
-                            'active': boolean of state
+                            "active": <boolean of state>
                         }
                     ]
                 }
@@ -545,46 +576,48 @@ class E3DC:
         return idlePeriods
 
     def set_idle_periods(self, idlePeriods, keepAlive=False):
-        """set via rscp protocol the idle periods
+        """set idle periods via rscp protocol
 
-        Inputs:
-            idlePeriods: Dictionary containing one or many idle periods
+        Args:
+            idlePeriods (dict): Dictionary containing one or many idle periods
                 {
-                    'idleCharge': list of the idle charge times
+                    "idleCharge":
                     [
                         {
-                            'day': the week day from 0 to 6
-                            'start': list of start time
+                            "day": <the week day from 0 to 6>,
+                            "start":
                             [
-                                int: hour from 0 to 23
-                                int: minute from 0 to 59
+                                <hour from 0 to 23>,
+                                <minute from 0 to 59>
                             ]
-                            'end': list of end time
+                            "end":
                             [
-                                int: hour from 0 to 23
-                                int: minute from 0 to 59
+                                <hour from 0 to 23>,
+                                <minute from 0 to 59>
                             [
-                            'active': boolean of state
+                            "active": <boolean of state>
                         }
                     ],
-                    'idleDischarge': list of the idle discharge times
+                    "idleDischarge":
                     [
                         {
-                            'day': the week day from 0 to 6
-                            'start': list of start time
+                            "day": <the week day from 0 to 6>,
+                            "start":
                             [
-                                int: hour from 0 to 23
-                                int: minute from 0 to 59
+                                <hour from 0 to 23>,
+                                <minute from 0 to 59>
                             ]
-                            'end': list of end time
+                            "end":
                             [
-                                int: hour from 0 to 23
-                                int: minute from 0 to 59
+                                <hour from 0 to 23>,
+                                <minute from 0 to 59>
                             [
-                            'active': boolean of state
+                            "active": <boolean of state>
                         }
                     ]
                 }
+            keepAlive (Optional[bool]): True to keep connection alive
+
         Returns:
             True if success
             False if error
@@ -740,22 +773,25 @@ class E3DC:
     ):
         """
         Reads DB data and summed up values for the given timespan via rscp protocol locally
-        All parameters are optional, but if none is given, the db data for today is retrieved
-        Possible values for timespan are 'YEAR', 'MONTH' or 'DAY'
+
+        Args:
+            startDate (datetime.date): start date for timespan, default today
+            timespan (str): string specifying the time span ["DAY", "MONTH", "YEAR"]
+            keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            Dictionary containing the stored db information structured as follows:
+            dict: Dictionary containing the stored db information structured as follows:
 
             {
-            'bat_power_in': power entering battery, charging
-            'bat_power_out': power leavinb battery, discharging
-            'solarProduction': power production
-            'grid_power_in': power taken from the grid
-            'grid_power_out': power into the grid
-            'consumption':  self consumed power
-            'stateOfCharge': battery charge level in %
-            'consumed_production':  power directly consumed in %
-            'autarky':  autarky in the period in %
+                "autarky": <autarky in the period in %>,
+                "bat_power_in": <power entering battery, charging>,
+                "bat_power_out": <power leavinb battery, discharging>,
+                "consumed_production": <power directly consumed in %>,
+                "consumption": <self consumed power>,
+                "grid_power_in": <power taken from the grid>,
+                "grid_power_out": <power into the grid>,
+                "stateOfCharge": <battery charge level in %>,
+                "solarProduction": <power production>,
             }
         """
 
@@ -793,17 +829,17 @@ class E3DC:
         )
 
         outObj = {
+            "autarky": rscpFindTag(response[2][0], "DB_AUTARKY")[2],
             "bat_power_in": rscpFindTag(response[2][0], "DB_BAT_POWER_IN")[2],
             "bat_power_out": rscpFindTag(response[2][0], "DB_BAT_POWER_OUT")[2],
-            "solarProduction": rscpFindTag(response[2][0], "DB_DC_POWER")[2],
-            "grid_power_in": rscpFindTag(response[2][0], "DB_GRID_POWER_IN")[2],
-            "grid_power_out": rscpFindTag(response[2][0], "DB_GRID_POWER_OUT")[2],
-            "consumption": rscpFindTag(response[2][0], "DB_CONSUMPTION")[2],
-            "stateOfCharge": rscpFindTag(response[2][0], "DB_BAT_CHARGE_LEVEL")[2],
             "consumed_production": rscpFindTag(
                 response[2][0], "DB_CONSUMED_PRODUCTION"
             )[2],
-            "autarky": rscpFindTag(response[2][0], "DB_AUTARKY")[2],
+            "consumption": rscpFindTag(response[2][0], "DB_CONSUMPTION")[2],
+            "grid_power_in": rscpFindTag(response[2][0], "DB_GRID_POWER_IN")[2],
+            "grid_power_out": rscpFindTag(response[2][0], "DB_GRID_POWER_OUT")[2],
+            "stateOfCharge": rscpFindTag(response[2][0], "DB_BAT_CHARGE_LEVEL")[2],
+            "solarProduction": rscpFindTag(response[2][0], "DB_DC_POWER")[2],
         }
         return outObj
 
@@ -861,21 +897,24 @@ class E3DC:
     def get_system_info(self, keepAlive=False):
         """Polls the system info via rscp protocol locally
 
+        Args:
+            keepAlive (Optional[bool]): True to keep connection alive
+
         Returns:
-            Dictionary containing the system info structured as follows:
+            dict: Dictionary containing the system info structured as follows:
                 {
-                    'deratePercent': % of installed peak power the feed in will be derated
-                    'deratePower': W at which the feed in will be derated
-                    'installedBatteryCapacity': installed Battery Capacity in W
-                    'installedPeakPower': installed peak power in W
-                    'externalSourceAvailable': wether an additional power meter is installed
-                    'maxAcPower': max AC power
-                    'macAddress': the mac address
-                    'maxBatChargePower': max Battery charge power
-                    'maxBatDischargePower': max Battery discharge power
-                    'model': model connected to
-                    'release': release version
-                    'serial': serial number of the system
+                    "deratePercent": <% of installed peak power the feed in will be derated>,
+                    "deratePower": <W at which the feed in will be derated>,
+                    "externalSourceAvailable": <wether an additional power meter is installed>,
+                    "installedBatteryCapacity": <installed Battery Capacity in W>,
+                    "installedPeakPower": <installed peak power in W>,
+                    "maxAcPower": <max AC power>,
+                    "macAddress": <the mac address>,
+                    "maxBatChargePower": <max Battery charge power>,
+                    "maxBatDischargePower": <max Battery discharge power>,
+                    "model": <model connected to>,
+                    "release": <release version>,
+                    "serial": <serial number of the system>
                 }
         """
 
@@ -889,9 +928,9 @@ class E3DC:
         outObj = {
             "deratePercent": self.deratePercent,
             "deratePower": self.deratePower,
+            "externalSourceAvailable": self.externalSourceAvailable,
             "installedBatteryCapacity": self.installedBatteryCapacity,
             "installedPeakPower": self.installedPeakPower,
-            "externalSourceAvailable": self.externalSourceAvailable,
             "maxAcPower": self.maxAcPower,
             "macAddress": self.macAddress,
             "maxBatChargePower": self.maxBatChargePower,
@@ -909,7 +948,7 @@ class E3DC:
             keepAlive (Optional[bool]): True to keep connection alive
 
         Returns:
-            Dictionary containing the system status structured as follows:
+            dict: Dictionary containing the system status structured as follows:
                 {
                     "dcdcAlive": <dcdc alive>,
                     "powerMeterAlive": <power meter alive>,
@@ -949,7 +988,7 @@ class E3DC:
             "serverConnectionAlive": 5,
             "pvDerated": 6,
             "emsAlive": 7,
-            # 'acCouplingMode:2;              // 8-9
+            # "acCouplingMode:2;              // 8-9
             "acModeBlocked": 10,
             "sysConfChecked": 11,
             "emergencyPowerStarted": 12,
