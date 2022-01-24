@@ -32,6 +32,7 @@ def truncate_multiple(string, value):
 
 class RSCPEncryptDecrypt:
     """A class for encrypting and decrypting RSCP data."""
+
     def __init__(self, key):
         """Constructor of a RSCP encryption and decryption class.
 
