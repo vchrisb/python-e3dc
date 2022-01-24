@@ -2039,7 +2039,7 @@ rscpTags = {
 
 def getHexTag(tag_str):
     """Get tag as hex.
-    
+
     Attributes:
         tag_str (str): tag as string
 
