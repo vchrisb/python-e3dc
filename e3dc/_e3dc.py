@@ -27,18 +27,26 @@ REQUEST_INTERVAL_SEC_LOCAL = 1  # minimum interval between requests
 
 
 class AuthenticationError(Exception):
+    """Class for Authentication Error Exception."""
+
     pass
 
 
 class NotAvailableError(Exception):
+    """Class for Not Available Error Exception."""
+
     pass
 
 
 class PollError(Exception):
+    """Class for Poll Error Exception."""
+
     pass
 
 
 class SendError(Exception):
+    """Class for Send Error Exception."""
+
     pass
 
 
@@ -48,15 +56,7 @@ class E3DC:
     CONNECT_LOCAL = 1
     CONNECT_WEB = 2
 
-    DAY_MONDAY = 0
-    DAY_TUESDAY = 1
-    DAY_WEDNESDAY = 2
-    DAY_THURSDAY = 3
-    DAY_FRIDAY = 4
-    DAY_SATURDAY = 5
-    DAY_SUNDAY = 6
-
-    IDLE_TYPE = {"idleCharge": 0, "idleDischarge": 1}
+    _IDLE_TYPE = {"idleCharge": 0, "idleDischarge": 1}
 
     def __init__(self, connectType, **kwargs):
         """Constructor of a E3DC object.
@@ -512,12 +512,12 @@ class E3DC:
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            ]
+                            ],
                             "end":
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            ]
+                            ],
                             "active": <boolean of state>
                         }
                     ],
@@ -529,12 +529,12 @@ class E3DC:
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            ]
+                            ],
                             "end":
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            ]
+                            ],
                             "active": <boolean of state>
                         }
                     ]
@@ -566,7 +566,7 @@ class E3DC:
                 "active": active,
             }
 
-            if typ == self.IDLE_TYPE["idleCharge"]:
+            if typ == self._IDLE_TYPE["idleCharge"]:
                 idlePeriods["idleCharge"][day] = periodObj
             else:
                 idlePeriods["idleDischarge"][day] = periodObj
@@ -588,12 +588,12 @@ class E3DC:
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            ]
+                            ],
                             "end":
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            ]
+                            ],
                             "active": <boolean of state>
                         }
                     ],
@@ -605,12 +605,12 @@ class E3DC:
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            ]
+                            ],
                             "end":
                             [
                                 <hour from 0 to 23>,
                                 <minute from 0 to 59>
-                            ]
+                            ],
                             "active": <boolean of state>
                         }
                     ]
@@ -696,7 +696,7 @@ class E3DC:
                                                 (
                                                     "EMS_IDLE_PERIOD_TYPE",
                                                     "UChar8",
-                                                    self.IDLE_TYPE[idle_type],
+                                                    self._IDLE_TYPE[idle_type],
                                                 ),
                                                 (
                                                     "EMS_IDLE_PERIOD_DAY",
