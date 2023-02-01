@@ -1,11 +1,7 @@
 name: Build Wheel
 
 # run on new version tag
-on:
-    push:
-        tags: 
-            - v*
-    workflow_dispatch:
+on: [push, pull_request]
         
 jobs:
     job:
@@ -15,7 +11,7 @@ jobs:
             - name: Prepare python
               uses: actions/setup-python@v4
               with:
-                python-version: 3.10
+                python-version: '3.10'
             
             - name: Install python dependencies
               run: pip install wheel twine
