@@ -30,8 +30,8 @@ class Testcontainers:
         container_name = "python-e3dc-" + version
         client.images.pull(image_name)
         try:
-            client.containers.get(container_name).remove(force=True)
-        except docker.errors.NotFound:
+            client.containers.get(container_name).remove(force=True)  # type: ignore
+        except docker.errors.NotFound:  # type: ignore
             pass
         self.container = client.containers.run(
             image_name,
@@ -53,20 +53,20 @@ class Testcontainers:
 
     def exec_cmd_stream(self, command):
         """Execute a command and stream output."""
-        _, stream = self.container.exec_run(cmd=command, stream=True)
+        _, stream = self.container.exec_run(cmd=command, stream=True)  # type: ignore
         for data in stream:
             print(data.decode(), end="")
 
     def exec_cmd(self, command):
         """Execute a command and validate return code."""
-        result, output = self.container.exec_run(cmd=command)
+        result, output = self.container.exec_run(cmd=command)  # type: ignore
         print(output.decode())
         if result != 0:
             exit(1)
 
     def remove(self):
         """Remove the test container."""
-        self.container.remove(force=True)
+        self.container.remove(force=True)  # type: ignore
 
 
 parser = argparse.ArgumentParser(description="E3DC testcontainers")

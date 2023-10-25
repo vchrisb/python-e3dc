@@ -26,11 +26,12 @@ if source.status_code != 200:
     exit(1)
 input = jsbeautifier.beautify(str(source.content, encoding="utf-8"))
 
-rscpTagsFromJS = re.search(
-    r"var rscpTags = {(.*?)getHexTag.*?}", input, re.DOTALL
-).group(1)
+rscpTagsFromJS = re.search(r"var rscpTags = {(.*?)getHexTag.*?}", input, re.DOTALL)
 
-lines = rscpTagsFromJS.splitlines()
+if rscpTagsFromJS is None:
+    exit(1)
+
+lines = rscpTagsFromJS.group(1).splitlines()
 
 print("class RscpTag(Enum):")
 print(
@@ -47,6 +48,6 @@ for line in lines:
     number = number.strip()
     hex_number = hex(int(float(number))).upper()[2:]
     padded_hex_number = hex_number.zfill(8)
-    name = string.removeprefix('"').removesuffix('",').strip()
+    name = string.removeprefix('"').removesuffix('",').strip()  # type: ignore
     enum_entry = f"    {name} = 0x{padded_hex_number}"
     print(enum_entry)
