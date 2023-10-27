@@ -6,3 +6,5 @@ echo "running isort"
 isort ./ --check -q
 echo "running black"
 black ./ --check -q
+echo "running pyright"
+pyright --pythonversion "3.8" --level error
